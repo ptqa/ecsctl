@@ -5,6 +5,7 @@ from . import wrapboto
 from .config import read_config, update_config, default_config
 from . import display
 from .pty import Pty
+from .ssh import Ssh
 import tabulate
 import datetime
 import pytz
@@ -193,6 +194,27 @@ def undrain(ctx, node, cluster):
     resp = bw.undrain_node(node, cluster=cluster)
     click.echo(resp['containerInstances'][0]['containerInstanceArn'])
 
+
+@cli.command(name='ssh', short_help='Execute a command in a container via ssh.')
+@click.option('--cluster')
+@click.option('-i', '--stdin', is_flag=True, default=False, show_default=True)
+@click.option('-t', '--tty', is_flag=True, default=False, show_default=True)
+@click.option('--container', default=None)
+@click.option('--ssh-port', default=22, type=int)
+@click.argument('task', required=True)
+@click.argument('command', nargs=-1)
+@click.pass_context
+def exec_command(ctx, task, command, stdin, tty, cluster, ssh_port,
+                 container):
+    if not cluster:
+        cluster = ctx.obj['cluster']
+    if not ssh_port:
+        ssh_port = int(ctx.obj['ssh_port'])
+    bw = ctx.obj['bw']
+    ssh = Ssh(bw=bw, task=task, command=command, cluster=cluster,
+              tty=tty, stdin=stdin, port=ssh_port,
+              container=container)
+    ssh.exec_command()
 
 @cli.command(name='exec', short_help='Execute a command in a container.')
 @click.option('--cluster')
