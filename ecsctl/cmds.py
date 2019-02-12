@@ -10,6 +10,7 @@ import tabulate
 import datetime
 import pytz
 import humanize
+import os
 from jsonpath import jsonpath as jp
 
 
@@ -197,23 +198,26 @@ def undrain(ctx, node, cluster):
 
 @cli.command(name='ssh', short_help='Execute a command in a container via ssh.')
 @click.option('--cluster')
-@click.option('-i', '--stdin', is_flag=True, default=False, show_default=True)
-@click.option('-t', '--tty', is_flag=True, default=False, show_default=True)
 @click.option('--container', default=None)
+@click.option('--user', default=None)
 @click.option('--ssh-port', default=22, type=int)
 @click.argument('task', required=True)
-@click.argument('command', nargs=-1)
+@click.argument('command')
 @click.pass_context
-def exec_command(ctx, task, command, stdin, tty, cluster, ssh_port,
-                 container):
+def exec_command(ctx, task, command, cluster, ssh_port,
+                 container, user):
     if not cluster:
         cluster = ctx.obj['cluster']
     if not ssh_port:
         ssh_port = int(ctx.obj['ssh_port'])
+    if not user:
+        if 'ECS_USER' in os.environ:
+            user = os.environ.get('ECS_USER')
+        else:
+            user = os.environ.get('USER')
     bw = ctx.obj['bw']
     ssh = Ssh(bw=bw, task=task, command=command, cluster=cluster,
-              tty=tty, stdin=stdin, port=ssh_port,
-              container=container)
+              port=ssh_port, user=user, container=container)
     ssh.exec_command()
 
 @cli.command(name='exec', short_help='Execute a command in a container.')
